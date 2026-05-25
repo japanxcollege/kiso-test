@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ファジィ理論 演習ツール — システム工学基礎 第4回</title>
+<style>
+:root{--navy:#1A2744;--gold:#C49A6C;--gold-light:#D4B896;--bg:#FAFAF8;--text:#2C2A27;--gray:#94918B;--green:#2E7D32;--blue:#3A7BD5;--red:#C62828}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Meiryo','Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.header{background:var(--navy);color:#fff;padding:16px 24px;border-bottom:4px solid var(--gold)}
+.header h1{font-size:20px;font-weight:bold}.header small{color:var(--gold-light);font-size:11px}
+.tabs{display:flex;gap:2px;background:var(--navy);padding:0 20px;flex-wrap:wrap}
+.tab{padding:10px 14px;cursor:pointer;color:var(--gold-light);font-size:12px;font-weight:bold;border:none;background:transparent;border-bottom:3px solid transparent;transition:all .2s}
+.tab:hover{background:rgba(255,255,255,.08)}.tab.active{color:#fff;border-bottom-color:var(--gold);background:rgba(255,255,255,.1)}
+.content{max-width:980px;margin:20px auto;padding:0 20px}
+.panel{display:none}.panel.active{display:block}
+.card{background:#fff;border:1px solid #e0ddd8;border-radius:6px;padding:20px;margin-bottom:16px}
+.card h3{color:var(--navy);font-size:16px;margin-bottom:12px;border-left:4px solid var(--gold);padding-left:10px}
+label{display:block;font-size:11px;color:var(--gray);margin-bottom:4px;margin-top:8px}
+input[type=text],input[type=number],textarea,select{width:100%;border:1px solid #ccc;border-radius:4px;padding:6px 10px;font-size:13px;font-family:monospace}
+textarea{resize:vertical;min-height:60px}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>*{flex:1;min-width:200px}
+.btn{display:inline-block;padding:8px 20px;background:var(--navy);color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;margin-top:12px;transition:background .2s}
+.btn:hover{background:#253a5e}.btn-green{background:var(--green)}.btn-green:hover{background:#1b5e20}
+.btn-red{background:var(--red)}.btn-red:hover{background:#991f1f}
+.result{margin-top:16px}
+table.matrix{border-collapse:collapse;font-size:12px;margin:8px 0}
+table.matrix th,table.matrix td{border:1px solid #ccc;padding:4px 8px;text-align:center;min-width:36px}
+table.matrix th{background:var(--navy);color:#fff;font-weight:bold}
+.formula{background:#f0f4f8;padding:8px 12px;border-radius:4px;font-family:monospace;font-size:12px;margin:8px 0;color:var(--navy);border-left:3px solid var(--gold)}
+.note{font-size:11px;color:var(--gray);margin-top:6px}
+.slider-group{margin:8px 0}.slider-val{font-size:16px;font-weight:bold;color:var(--gold)}
+.compare-row{display:flex;gap:8px;margin-top:8px}.compare-box{padding:8px 14px;border-radius:4px;font-weight:bold;text-align:center;flex:1;font-size:12px}
+.footer{text-align:center;padding:16px;font-size:11px;color:var(--gray);border-top:2px solid var(--gold);margin-top:30px}
+canvas.draw-canvas{border:1px solid #ccc;border-radius:4px;cursor:crosshair;background:#fff;display:block;width:100%;max-width:900px}
+</style>
+</head>
+<body>
+<div class="header"><small>システム工学基礎 第4回 演習ツール ｜ 2026年度 東京大学</small><h1>ファジィ理論 インタラクティブ演習</h1></div>
+<div class="tabs">
+<button class="tab active" onclick="showTab(event,'sets')">①集合演算</button>
+<button class="tab" onclick="showTab(event,'numbers')">②ファジィ数</button>
+<button class="tab" onclick="showTab(event,'relations')">③関係合成</button>
+<button class="tab" onclick="showTab(event,'graph')">④グラフ</button>
+<button class="tab" onclick="showTab(event,'choquet')">⑤積分評価</button>
+<button class="tab" onclick="showTab(event,'draw')">⑥関数描画</button>
+</div>
+<div class="content">
+
+<div id="tab-sets" class="panel active"><div class="card"><h3>ファジィ集合の演算</h3>
+<label>要素（カンマ区切り）</label><input type="text" id="s_elements" value="10分,20分,30分,40分,50分,60分">
+<label>集合A: μA(x)</label><input type="text" id="s_muA" value="0.2,0.6,1.0,0.7,0.3,0.1">
+<label>集合B: μB(x)</label><input type="text" id="s_muB" value="0.1,0.4,0.8,1.0,0.5,0.2">
+<button class="btn btn-green" onclick="calcSets()">計算実行</button><div id="sets_result" class="result"></div></div></div>
+
+<div id="tab-numbers" class="panel"><div class="card"><h3>三角型ファジィ数の演算とα-カット</h3>
+<div class="row"><div><label>A = (a₁, b₁, c₁)</label><div style="display:flex;gap:4px"><input type="number" id="n_a1" value="30" style="width:70px"><input type="number" id="n_b1" value="40" style="width:70px"><input type="number" id="n_c1" value="60" style="width:70px"></div></div>
+<div><label>B = (a₂, b₂, c₂)</label><div style="display:flex;gap:4px"><input type="number" id="n_a2" value="10" style="width:70px"><input type="number" id="n_b2" value="15" style="width:70px"><input type="number" id="n_c2" value="25" style="width:70px"></div></div></div>
+<div class="slider-group"><label>α値: <span id="alpha_val" class="slider-val">0.50</span></label>
+<input type="range" id="n_alpha" min="0" max="1" step="0.05" value="0.5" oninput="document.getElementById('alpha_val').textContent=parseFloat(this.value).toFixed(2);calcNumbers();"></div>
+<button class="btn btn-green" onclick="calcNumbers()">計算実行</button><div id="numbers_result" class="result"></div></div></div>
+
+<div id="tab-relations" class="panel"><div class="card"><h3>ファジィ関係の合成（max-min）</h3>
+<div class="row"><div><label>R₁ 行列</label><textarea id="r_r1">0.7,0.3,0.9,0.5
+0.4,0.8,0.2,0.6
+0.9,0.1,0.5,0.3</textarea></div><div><label>R₂ 行列</label><textarea id="r_r2">0.5,0.3,0.7
+0.8,0.2,0.4
+0.3,0.7,0.6
+0.9,0.5,0.1</textarea></div></div>
+<button class="btn btn-green" onclick="calcRelations()">合成計算</button><div id="relations_result" class="result"></div></div></div>
+
+<div id="tab-graph" class="panel"><div class="card"><h3>ファジィグラフとα-レベル関係</h3>
+<label>類似関係行列</label><textarea id="g_mat" style="min-height:100px">1.0,0.8,0.3,0.5,0.2,0.4
+0.8,1.0,0.6,0.4,0.7,0.3
+0.3,0.6,1.0,0.2,0.5,0.8
+0.5,0.4,0.2,1.0,0.3,0.6
+0.2,0.7,0.5,0.3,1.0,0.4
+0.4,0.3,0.8,0.6,0.4,1.0</textarea>
+<div class="slider-group"><label>α値: <span id="g_alpha_val" class="slider-val">0.50</span></label>
+<input type="range" id="g_alpha" min="0" max="1" step="0.05" value="0.5" oninput="document.getElementById('g_alpha_val').textContent=parseFloat(this.value).toFixed(2);if(window._gd)drawGraph();"></div>
+<button class="btn btn-green" onclick="calcGraph()">表示</button><div id="graph_result" class="result"></div></div></div>
+
+<div id="tab-choquet" class="panel"><div class="card"><h3>ショケ積分による総合評価</h3>
+<div class="row"><div><label>評価基準</label><input type="text" id="c_criteria" value="英会話,情報処理"></div>
+<div><label>g({xᵢ})</label><input type="text" id="c_g" value="0.9,0.9"></div>
+<div><label>g(全体)</label><input type="number" id="c_gtotal" value="1.0" step="0.1" style="width:80px"></div></div>
+<label>候補者（名前,点数,...）</label><textarea id="c_cands">P君,90,20
+Q君,60,60</textarea>
+<button class="btn btn-green" onclick="calcChoquet()">評価実行</button><div id="choquet_result" class="result"></div></div></div>
+
+<div id="tab-draw" class="panel"><div class="card"><h3>メンバーシップ関数のマウス描画</h3>
+<p class="note">マウスでドラッグしてメンバーシップ関数を自由に描画。2つの関数の演算結果を確認できます。</p>
+<div class="row" style="margin-bottom:8px">
+<div><label>X軸の範囲</label><div style="display:flex;gap:4px;align-items:center"><input type="number" id="d_xmin" value="0" style="width:60px"> 〜 <input type="number" id="d_xmax" value="100" style="width:60px"></div></div>
+<div><label>描画対象</label><select id="d_target" style="padding:6px;font-size:13px"><option value="A">集合 A（青）</option><option value="B">集合 B（黄）</option></select></div>
+<div style="display:flex;gap:4px;align-items:flex-end"><button class="btn btn-green" onclick="calcDrawOps()">演算</button><button class="btn btn-red" onclick="clearDraw()">クリア</button></div></div>
+<canvas id="drawCanvas" class="draw-canvas" width="900" height="300"></canvas>
+<div class="note">マウスドラッグで描画 ｜ 青=A, 黄=B ｜ Y軸: μ(x) 0〜1</div>
+<div id="draw_result" class="result"></div></div></div>
+
+</div>
+<div class="footer">東京大学 工学部 システム創成学科 ｜ 青山研究室 ｜ 2026年度</div>
+
+<script>
+function showTab(e,id){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');e.target.classList.add('active');if(id==='draw')initCanvas();}
+
+function calcSets(){const els=document.getElementById('s_elements').value.split(',').map(s=>s.trim()),a=document.getElementById('s_muA').value.split(',').map(Number),b=document.getElementById('s_muB').value.split(',').map(Number),n=els.length;if(a.length!==n||b.length!==n){alert('要素数不一致');return;}
+const u=a.map((v,i)=>Math.max(v,b[i])),it=a.map((v,i)=>Math.min(v,b[i])),c=a.map(v=>+(1-v).toFixed(2)),d=a.map((v,i)=>+Math.min(v,1-b[i]).toFixed(2));
+function bar(ds,cs,ls,t){const W=580,H=130,p=45,bw=22,gw=bw*ds.length+6;let s=`<svg viewBox="0 0 ${W} ${H+28}" style="max-height:170px;width:100%"><text x="${p}" y="12" font-size="11" fill="#1A2744" font-weight="bold">${t}</text>`;for(let i=0;i<n;i++){const gx=p+i*(gw+10);ds.forEach((dd,di)=>{const h=dd[i]*100;s+=`<rect x="${gx+di*bw}" y="${H-14-h}" width="${bw-2}" height="${h}" fill="${cs[di]}" rx="2" opacity=".85"/><text x="${gx+di*bw+(bw-2)/2}" y="${H-14-h-3}" text-anchor="middle" font-size="9" fill="${cs[di]}" font-weight="bold">${dd[i].toFixed(1)}</text>`;});s+=`<text x="${gx+(gw-6)/2}" y="${H+8}" text-anchor="middle" font-size="9" fill="#475569">${ls[i]}</text>`;}return s+'</svg>';}
+let h='';h+=bar([a,b],['#3b82f6','#f59e0b'],els,'入力: A (青) vs B (黄)');h+=bar([u],['#10b981'],els,'A∪B = Max');h+=bar([it],['#8b5cf6'],els,'A∩B = Min');h+=bar([c],['#ef4444'],els,"A' = 1−μA");h+=bar([d],['#f97316'],els,'A−B');
+h+='<div class="formula">';h+=`<b>A∪B</b>={${els.map((e,i)=>`${u[i].toFixed(1)}/${e}`).join(',')}}<br><b>A∩B</b>={${els.map((e,i)=>`${it[i].toFixed(1)}/${e}`).join(',')}}<br><b>A'</b>={${els.map((e,i)=>`${c[i]}/${e}`).join(',')}}<br><b>A−B</b>={${els.map((e,i)=>`${d[i]}/${e}`).join(',')}}`;h+='</div>';document.getElementById('sets_result').innerHTML=h;}
+
+function calcNumbers(){const A=[+document.getElementById('n_a1').value,+document.getElementById('n_b1').value,+document.getElementById('n_c1').value],B=[+document.getElementById('n_a2').value,+document.getElementById('n_b2').value,+document.getElementById('n_c2').value],al=+document.getElementById('n_alpha').value;
+const sm=[A[0]+B[0],A[1]+B[1],A[2]+B[2]],sb=[A[0]-B[2],A[1]-B[1],A[2]-B[0]];
+const aA=[A[0]+al*(A[1]-A[0]),A[2]-al*(A[2]-A[1])],aB=[B[0]+al*(B[1]-B[0]),B[2]-al*(B[2]-B[1])],aS=[sm[0]+al*(sm[1]-sm[0]),sm[2]-al*(sm[2]-sm[1])];
+function tri(ts,cs,title,cuts){const all=ts.flat();let xm=Math.min(...all),xM=Math.max(...all),r=xM-xm;xm-=r*.15;xM+=r*.15;if(xm===xM){xm-=10;xM+=10;}
+const W=560,H=190,pL=50,pR=30,pT=30,pB=40,pW=W-pL-pR,pH=H-pT-pB;const sx=x=>pL+(x-xm)/(xM-xm)*pW,sy=y=>pT+pH-y*pH;
+let s=`<svg viewBox="0 0 ${W} ${H}" style="max-height:210px;width:100%"><text x="${W/2}" y="16" text-anchor="middle" font-size="12" fill="#1A2744" font-weight="bold">${title}</text>`;
+s+=`<line x1="${pL}" y1="${sy(0)}" x2="${W-pR}" y2="${sy(0)}" stroke="#64748b" stroke-width="1"/><line x1="${pL}" y1="${sy(0)}" x2="${pL}" y2="${sy(1.05)}" stroke="#64748b" stroke-width="1"/>`;
+[0,.25,.5,.75,1].forEach(v=>{s+=`<line x1="${pL-3}" y1="${sy(v)}" x2="${pL}" y2="${sy(v)}" stroke="#64748b"/><text x="${pL-6}" y="${sy(v)+3}" font-size="9" text-anchor="end" fill="#64748b">${v}</text>`;if(v>0)s+=`<line x1="${pL}" y1="${sy(v)}" x2="${W-pR}" y2="${sy(v)}" stroke="#e2e8f0" stroke-width=".5" stroke-dasharray="3,3"/>`;});
+let step=1;const xR=xM-xm;if(xR>200)step=50;else if(xR>100)step=20;else if(xR>50)step=10;else if(xR>20)step=5;else if(xR>10)step=2;
+for(let x=Math.ceil(xm/step)*step;x<=xM;x+=step){s+=`<line x1="${sx(x)}" y1="${sy(0)}" x2="${sx(x)}" y2="${sy(0)+4}" stroke="#64748b"/><text x="${sx(x)}" y="${sy(0)+15}" text-anchor="middle" font-size="9" fill="#64748b">${x}</text>`;s+=`<line x1="${sx(x)}" y1="${sy(0)}" x2="${sx(x)}" y2="${sy(1)}" stroke="#f1f5f9" stroke-width=".3"/>`;  }
+s+=`<text x="${W/2}" y="${H-2}" text-anchor="middle" font-size="9" fill="#94918B">x</text><text x="12" y="${pT+pH/2}" text-anchor="middle" font-size="9" fill="#94918B" transform="rotate(-90,12,${pT+pH/2})">μ(x)</text>`;
+if(al>0){s+=`<line x1="${pL}" y1="${sy(al)}" x2="${W-pR}" y2="${sy(al)}" stroke="#ef4444" stroke-width="1" stroke-dasharray="5,3"/><text x="${W-pR+2}" y="${sy(al)+3}" font-size="9" fill="#ef4444" font-weight="bold">α=${al.toFixed(2)}</text>`;}
+ts.forEach((t,i)=>{s+=`<polygon points="${sx(t[0])},${sy(0)} ${sx(t[1])},${sy(1)} ${sx(t[2])},${sy(0)}" fill="${cs[i]}" fill-opacity=".12" stroke="${cs[i]}" stroke-width="2"/><circle cx="${sx(t[1])}" cy="${sy(1)}" r="3" fill="${cs[i]}"/><text x="${sx(t[1])}" y="${sy(1)-8}" text-anchor="middle" font-size="10" fill="${cs[i]}" font-weight="bold">(${t.join(', ')})</text>`;});
+if(cuts&&al>0)cuts.forEach((ac,i)=>{const c=cs[i]||'#ef4444';s+=`<line x1="${sx(ac[0])}" y1="${sy(al)}" x2="${sx(ac[1])}" y2="${sy(al)}" stroke="${c}" stroke-width="4" opacity=".7"/><circle cx="${sx(ac[0])}" cy="${sy(al)}" r="4" fill="${c}"/><circle cx="${sx(ac[1])}" cy="${sy(al)}" r="4" fill="${c}"/><text x="${sx(ac[0])}" y="${sy(al)-7}" text-anchor="middle" font-size="8" fill="${c}" font-weight="bold">${ac[0].toFixed(1)}</text><text x="${sx(ac[1])}" y="${sy(al)-7}" text-anchor="middle" font-size="8" fill="${c}" font-weight="bold">${ac[1].toFixed(1)}</text><line x1="${sx(ac[0])}" y1="${sy(al)}" x2="${sx(ac[0])}" y2="${sy(0)}" stroke="${c}" stroke-width=".8" stroke-dasharray="3,3" opacity=".5"/><line x1="${sx(ac[1])}" y1="${sy(al)}" x2="${sx(ac[1])}" y2="${sy(0)}" stroke="${c}" stroke-width=".8" stroke-dasharray="3,3" opacity=".5"/>`;});
+return s+'</svg>';}
+let h='';h+=tri([A,B],['#3b82f6','#f59e0b'],'A (青) と B (黄)',[aA,aB]);h+=tri([sm],['#10b981'],`A + B = (${sm.join(', ')})`,[aS]);h+=tri([sb],['#8b5cf6'],`A − B = (${sb.join(', ')})`);
+h+='<div class="formula">';h+=`<b>加算:</b> A+B = (${sm.join(', ')})<br><b>減算:</b> A−B = (${sb.join(', ')})<br><br>`;
+h+=`<b>α-カット (α=${al.toFixed(2)}):</b><br>`;
+h+=`&nbsp; A<sub>α</sub> = [${A[0]}+${al}×${A[1]-A[0]}, ${A[2]}−${al}×${A[2]-A[1]}] = <b>[${aA[0].toFixed(1)}, ${aA[1].toFixed(1)}]</b> (幅:${(aA[1]-aA[0]).toFixed(1)})<br>`;
+h+=`&nbsp; B<sub>α</sub> = [${B[0]}+${al}×${B[1]-B[0]}, ${B[2]}−${al}×${B[2]-B[1]}] = <b>[${aB[0].toFixed(1)}, ${aB[1].toFixed(1)}]</b> (幅:${(aB[1]-aB[0]).toFixed(1)})<br>`;
+h+=`&nbsp; (A+B)<sub>α</sub> = <b>[${aS[0].toFixed(1)}, ${aS[1].toFixed(1)}]</b> (幅:${(aS[1]-aS[0]).toFixed(1)})`;
+h+='</div>';document.getElementById('numbers_result').innerHTML=h;}
+
+function calcRelations(){const r1=document.getElementById('r_r1').value.trim().split('\n').map(r=>r.split(',').map(Number)),r2=document.getElementById('r_r2').value.trim().split('\n').map(r=>r.split(',').map(Number));const m=r1.length,k=r1[0].length,n=r2[0].length;if(r2.length!==k){alert('列数不一致');return;}
+const c=[];for(let i=0;i<m;i++){c[i]=[];for(let j=0;j<n;j++){let mx=0;for(let p=0;p<k;p++)mx=Math.max(mx,Math.min(r1[i][p],r2[p][j]));c[i][j]=+mx.toFixed(2);}}
+function mt(mat,t){let h=`<div style="font-size:13px;font-weight:bold;color:#1A2744;margin-bottom:4px">${t}</div><table class="matrix"><tr><th></th>`;for(let j=0;j<mat[0].length;j++)h+=`<th>${j+1}</th>`;h+='</tr>';mat.forEach((r,i)=>{h+=`<tr><th>${i+1}</th>`;r.forEach(v=>{h+=`<td style="background:rgba(196,154,108,${v*.7});font-weight:bold;font-size:11px">${v.toFixed(1)}</td>`;});h+='</tr>';});return h+'</table>';}
+let h='<div class="row">';h+='<div>'+mt(r1,'R₁')+'</div><div>'+mt(r2,'R₂')+'</div><div>'+mt(c,'R₁○R₂')+'</div></div>';h+='<div class="formula">max-min: μ(x,z) = max<sub>y</sub> min[μ<sub>R₁</sub>(x,y), μ<sub>R₂</sub>(y,z)]</div>';document.getElementById('relations_result').innerHTML=h;}
+
+function calcGraph(){window._gd=document.getElementById('g_mat').value.trim().split('\n').map(r=>r.split(',').map(Number));drawGraph();}
+function drawGraph(){const m=window._gd,n=m.length,a=+document.getElementById('g_alpha').value,R=110,cx=150,cy=150;const pos=[];for(let i=0;i<n;i++){const an=2*Math.PI*i/n-Math.PI/2;pos.push({x:cx+R*Math.cos(an),y:cy+R*Math.sin(an)});}
+let s='<svg viewBox="0 0 300 300" style="max-height:300px;width:300px;border:1px solid #e0ddd8;border-radius:6px;background:#fff">';for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const v=m[i][j];if(v<a)continue;s+=`<line x1="${pos[i].x}" y1="${pos[i].y}" x2="${pos[j].x}" y2="${pos[j].y}" stroke="rgba(196,154,108,${v})" stroke-width="${v*5}"/><text x="${(pos[i].x+pos[j].x)/2}" y="${(pos[i].y+pos[j].y)/2-4}" text-anchor="middle" font-size="8" fill="#475569">${v.toFixed(1)}</text>`;}
+pos.forEach((p,i)=>{s+=`<circle cx="${p.x}" cy="${p.y}" r="18" fill="#1A2744" stroke="#C49A6C" stroke-width="2"/><text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-size="12" fill="white" font-weight="bold">${i+1}</text>`;});s+='</svg>';
+const pr=Array.from({length:n},(_,i)=>i);function f(x){while(pr[x]!==x)x=pr[x];return x;}let ec=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(m[i][j]>=a){pr[f(i)]=f(j);ec++;}
+const g={};for(let i=0;i<n;i++){const r=f(i);if(!g[r])g[r]=[];g[r].push(i+1);}
+let info=`<div style="margin-top:8px"><div style="font-size:13px;font-weight:bold;color:#1A2744">α=${a.toFixed(2)}</div><div style="font-size:12px">エッジ:${ec}</div>`;Object.values(g).forEach((gr,i)=>{info+=`<div style="font-size:12px;margin-left:8px">G${i+1}: {${gr.join(',')}}</div>`;});info+='</div>';
+document.getElementById('graph_result').innerHTML='<div class="row"><div>'+s+'</div><div>'+info+'</div></div>';}
+
+function calcChoquet(){const cr=document.getElementById('c_criteria').value.split(',').map(s=>s.trim()),gs=document.getElementById('c_g').value.split(',').map(Number),gT=+document.getElementById('c_gtotal').value;
+const cands=document.getElementById('c_cands').value.trim().split('\n').map(l=>{const p=l.split(',');return{name:p[0].trim(),scores:p.slice(1).map(Number)};});const n=cr.length;let lam=0;if(n===2&&gs[0]*gs[1]!==0)lam=(gT-gs[0]-gs[1])/(gs[0]*gs[1]);
+const res=cands.map(c=>{const wS=gs.reduce((a,b)=>a+b,0),add=c.scores.reduce((s,v,i)=>s+v*gs[i],0)/wS;const ix=c.scores.map((v,i)=>({val:v,idx:i}));ix.sort((a,b)=>a.val-b.val);let ch=0;for(let i=0;i<n;i++){const sub=ix.slice(i).map(x=>x.idx);let gH;if(sub.length===n)gH=gT;else if(sub.length===1)gH=gs[sub[0]];else{gH=gs[sub[0]];for(let k=1;k<sub.length;k++)gH=gH+gs[sub[k]]+lam*gH*gs[sub[k]];}ch+=(ix[i].val-(i===0?0:ix[i-1].val))*gH;}return{name:c.name,scores:c.scores,add:+add.toFixed(1),ch:+ch.toFixed(1)};});
+let h=`<div class="formula"><b>λ=${lam.toFixed(3)}</b>（${lam>0?'相乗的':lam<0?'代替的':'加法的'}）</div>`;h+='<table class="matrix" style="width:100%"><tr><th>候補</th>';cr.forEach(c=>{h+=`<th>${c}</th>`;});h+='<th style="background:#3A7BD5">加法</th><th style="background:#2E7D32">ショケ</th></tr>';
+res.forEach(r=>{h+=`<tr><td style="font-weight:bold">${r.name}</td>`;r.scores.forEach(s=>{h+=`<td>${s}</td>`;});h+=`<td style="font-weight:bold;color:#3A7BD5">${r.add}</td><td style="font-weight:bold;color:#2E7D32">${r.ch}</td></tr>`;});h+='</table>';
+h+='<div class="compare-row">';h+=`<div class="compare-box" style="background:#e8f0fe;color:#3A7BD5"><b>加法:</b> ${[...res].sort((a,b)=>b.add-a.add).map(r=>r.name).join(' > ')}</div>`;
+h+=`<div class="compare-box" style="background:#e8f5e9;color:#2E7D32"><b>ショケ:</b> ${[...res].sort((a,b)=>b.ch-a.ch).map(r=>r.name).join(' > ')}</div></div>`;
+document.getElementById('choquet_result').innerHTML=h;}
+
+// ===== 6. Drawing =====
+let dA=null,dB=null,cReady=false;
+function initCanvas(){if(cReady)return;cReady=true;const cv=document.getElementById('drawCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,pL=50,pR=20,pT=20,pB=35,pW=W-pL-pR,pH=H-pT-pB,N=200;dA=new Float32Array(N);dB=new Float32Array(N);let dr=false;
+function render(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);const xn=+document.getElementById('d_xmin').value,xx=+document.getElementById('d_xmax').value;
+ctx.strokeStyle='#e2e8f0';ctx.lineWidth=.5;for(let v=.25;v<=1;v+=.25){const y=pT+pH-v*pH;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(pL+pW,y);ctx.stroke();}
+const xR=xx-xn;let st=10;if(xR>200)st=50;else if(xR>100)st=20;else if(xR>50)st=10;else if(xR>20)st=5;else st=2;
+for(let x=Math.ceil(xn/st)*st;x<=xx;x+=st){const px=pL+(x-xn)/xR*pW;ctx.beginPath();ctx.moveTo(px,pT);ctx.lineTo(px,pT+pH);ctx.stroke();}
+ctx.strokeStyle='#64748b';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pL,pT+pH);ctx.lineTo(pL+pW,pT+pH);ctx.stroke();ctx.beginPath();ctx.moveTo(pL,pT+pH);ctx.lineTo(pL,pT);ctx.stroke();
+ctx.fillStyle='#64748b';ctx.font='10px Meiryo';ctx.textAlign='right';[0,.25,.5,.75,1].forEach(v=>{ctx.fillText(v.toFixed(2),pL-5,pT+pH-v*pH+3);});
+ctx.textAlign='center';for(let x=Math.ceil(xn/st)*st;x<=xx;x+=st){ctx.fillText(x,pL+(x-xn)/xR*pW,pT+pH+15);}
+ctx.fillText('x',pL+pW/2,H-3);ctx.save();ctx.translate(12,pT+pH/2);ctx.rotate(-Math.PI/2);ctx.fillText('μ(x)',0,0);ctx.restore();
+function dc(d,col,lw){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();for(let i=0;i<N;i++){const px=pL+i/N*pW,py=pT+pH-d[i]*pH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);}ctx.stroke();ctx.globalAlpha=.08;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(pL,pT+pH);for(let i=0;i<N;i++)ctx.lineTo(pL+i/N*pW,pT+pH-d[i]*pH);ctx.lineTo(pL+pW,pT+pH);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+dc(dA,'#3b82f6',2.5);dc(dB,'#f59e0b',2.5);
+ctx.font='bold 11px Meiryo';ctx.textAlign='left';ctx.fillStyle='#3b82f6';ctx.fillText('■ A',pL+pW-80,pT+14);ctx.fillStyle='#f59e0b';ctx.fillText('■ B',pL+pW-40,pT+14);}
+function gc(e){const r=cv.getBoundingClientRect(),sx=W/r.width,sy=H/r.height,mx=(e.clientX-r.left)*sx,my=(e.clientY-r.top)*sy;return{xi:Math.max(0,Math.min(N-1,Math.round((mx-pL)/pW*N))),mu:Math.max(0,Math.min(1,(pT+pH-my)/pH))};}
+function paint(e){const{xi,mu}=gc(e),d=document.getElementById('d_target').value==='A'?dA:dB;for(let dd=-3;dd<=3;dd++){const idx=xi+dd;if(idx>=0&&idx<N){const w=1-Math.abs(dd)/4;d[idx]=d[idx]*(1-w)+mu*w;}}render();}
+cv.addEventListener('mousedown',e=>{dr=true;paint(e);});cv.addEventListener('mousemove',e=>{if(dr)paint(e);});cv.addEventListener('mouseup',()=>dr=false);cv.addEventListener('mouseleave',()=>dr=false);
+cv.addEventListener('touchstart',e=>{e.preventDefault();dr=true;paint(e.touches[0]);},{passive:false});cv.addEventListener('touchmove',e=>{e.preventDefault();if(dr)paint(e.touches[0]);},{passive:false});cv.addEventListener('touchend',()=>dr=false);
+render();window._rdc=render;}
+function clearDraw(){const t=document.getElementById('d_target').value;if(t==='A'&&dA)dA.fill(0);else if(dB)dB.fill(0);if(window._rdc)window._rdc();document.getElementById('draw_result').innerHTML='';}
+function calcDrawOps(){if(!dA||!dB)return;const N=dA.length,xn=+document.getElementById('d_xmin').value,xx=+document.getElementById('d_xmax').value;
+const u=new Float32Array(N),it=new Float32Array(N),cm=new Float32Array(N);for(let i=0;i<N;i++){u[i]=Math.max(dA[i],dB[i]);it[i]=Math.min(dA[i],dB[i]);cm[i]=1-dA[i];}
+function ms(d,col,t){const W=460,H=120,pl=40,pr=10,pt=18,pb=25,pw=W-pl-pr,ph=H-pt-pb;let s=`<svg viewBox="0 0 ${W} ${H}" style="max-height:130px;width:100%"><text x="${pl}" y="13" font-size="10" fill="#1A2744" font-weight="bold">${t}</text>`;
+s+=`<line x1="${pl}" y1="${pt+ph}" x2="${pl+pw}" y2="${pt+ph}" stroke="#64748b" stroke-width="1"/><line x1="${pl}" y1="${pt+ph}" x2="${pl}" y2="${pt}" stroke="#64748b" stroke-width="1"/>`;
+[0,.5,1].forEach(v=>{s+=`<text x="${pl-4}" y="${pt+ph-v*ph+3}" font-size="8" text-anchor="end" fill="#64748b">${v}</text>`;});
+const xR=xx-xn;let st=10;if(xR>200)st=50;else if(xR>50)st=10;else st=5;for(let x=Math.ceil(xn/st)*st;x<=xx;x+=st)s+=`<text x="${pl+(x-xn)/xR*pw}" y="${H-3}" text-anchor="middle" font-size="8" fill="#64748b">${x}</text>`;
+s+=`<path d="M${pl},${pt+ph}`;for(let i=0;i<N;i++)s+=`L${pl+i/N*pw},${pt+ph-d[i]*ph}`;s+=`L${pl+pw},${pt+ph}Z" fill="${col}" fill-opacity=".15" stroke="${col}" stroke-width="1.5"/></svg>`;return s;}
+let h='<div style="margin-top:12px">';h+=ms(u,'#10b981','A∪B = Max(μA,μB)');h+=ms(it,'#8b5cf6','A∩B = Min(μA,μB)');h+=ms(cm,'#ef4444',"A' = 1−μA");h+='</div>';document.getElementById('draw_result').innerHTML=h;}
+</script>
+</body>
+</html>

@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISM法・DEMATEL法 計算ツール（ファジィ拡張版）</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif; background: #f5f7fa; color: #333; }
+
+.header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 20px 30px; }
+.header h1 { font-size: 1.6em; margin-bottom: 4px; }
+.header p { font-size: 0.9em; opacity: 0.85; }
+
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 0; }
+.tab { padding: 10px 24px; border: none; background: #dce3ea; color: #555; cursor: pointer;
+       border-radius: 8px 8px 0 0; font-size: 0.95em; font-weight: 600; transition: all 0.2s; }
+.tab:hover { background: #c5d0db; }
+.tab.active { background: white; color: #2c3e50; }
+
+.panel { background: white; border-radius: 0 8px 8px 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: none; }
+.panel.active { display: block; }
+
+.section { margin-bottom: 24px; }
+.section h3 { font-size: 1.1em; color: #2c3e50; margin-bottom: 12px; border-left: 4px solid #3498db; padding-left: 10px; }
+
+.input-group { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+.input-group label { font-size: 0.85em; color: #666; display: block; margin-bottom: 4px; }
+.input-group input, .input-group select, .input-group textarea {
+  padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+.input-group textarea { width: 100%; min-height: 120px; font-family: monospace; }
+
+.btn { padding: 8px 20px; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+.btn-primary { background: #3498db; color: white; }
+.btn-primary:hover { background: #2980b9; }
+.btn-success { background: #27ae60; color: white; }
+.btn-success:hover { background: #219a52; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-warning:hover { background: #d68910; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-danger:hover { background: #c0392b; }
+.btn-sm { padding: 5px 12px; font-size: 0.8em; }
+
+.matrix-container { overflow: auto; max-height: 70vh; margin-top: 8px; }
+table.matrix { border-collapse: collapse; font-size: 0.82em; }
+table.matrix th, table.matrix td { border: 1px solid #d0d0d0; padding: 4px 8px; text-align: center; white-space: nowrap; }
+table.matrix th { background: #ecf0f1; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+table.matrix th.row-header { position: sticky; left: 0; z-index: 2; background: #ecf0f1; }
+table.matrix th.corner { position: sticky; left: 0; top: 0; z-index: 3; background: #ecf0f1; }
+table.matrix td.row-header { position: sticky; left: 0; background: #f8f9fa; font-weight: 600; text-align: right; }
+table.matrix td input { width: 40px; text-align: center; border: 1px solid #ddd; padding: 2px; font-size: 0.95em; border-radius: 2px; }
+table.matrix td input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 3px rgba(52,152,219,0.3); }
+table.matrix td.diagonal { background: #f0f0f0; }
+
+.result-section { margin-top: 20px; padding: 16px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0; }
+.result-section h4 { color: #2c3e50; margin-bottom: 10px; font-size: 1em; }
+
+table.result { border-collapse: collapse; font-size: 0.82em; margin-top: 8px; }
+table.result th, table.result td { border: 1px solid #d0d0d0; padding: 4px 8px; text-align: center; }
+table.result th { background: #ecf0f1; font-weight: 600; }
+table.result td.label { text-align: right; font-weight: 600; background: #f8f9fa; }
+table.result td.highlight { background: #fff3cd; }
+
+.hierarchy-display { margin-top: 12px; }
+.hierarchy-level { display: flex; align-items: center; gap: 8px; margin: 6px 0; padding: 8px 12px; background: white; border-radius: 4px; border-left: 3px solid #3498db; }
+.hierarchy-level .level-num { font-weight: 700; color: #3498db; min-width: 60px; }
+.hierarchy-level .level-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.hierarchy-level .level-items span { background: #e8f4f8; padding: 2px 10px; border-radius: 12px; font-size: 0.88em; }
+
+.chart-container { margin-top: 16px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+#dematelChart { max-width: 100%; }
+
+.sample-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+.hidden { display: none; }
+
+.items-input { display: flex; gap: 16px; align-items: flex-start; }
+.items-input textarea { flex: 1; }
+.items-input .help { font-size: 0.8em; color: #888; margin-top: 4px; max-width: 200px; }
+
+.excel-upload { margin-bottom: 16px; padding: 12px; background: #eaf4fe; border-radius: 6px; border: 1px dashed #3498db; }
+.excel-upload label { font-weight: 600; color: #2c3e50; }
+
+.set-display { margin: 4px 0; font-size: 0.88em; }
+.set-display .set-label { font-weight: 600; color: #555; min-width: 30px; display: inline-block; }
+
+.graph-container { margin-top: 16px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ISM法・DEMATEL法 計算ツール（ファジィ拡張版）</h1>
+  <p>ISM / DEMATEL ＋ ファジィ拡張・ソシオメトリー分析</p>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('items', this)">項目設定</button>
+    <button class="tab" onclick="switchTab('ism', this)">ISM法</button>
+    <button class="tab" onclick="switchTab('dematel', this)">DEMATEL法</button>
+    <button class="tab" onclick="switchTab('help', this)">使用方法</button>
+    <button class="tab" onclick="switchTab('fuzzyDematel', this)">ファジィDEMATEL</button>
+    <button class="tab" onclick="switchTab('fuzzyIsm', this)">ファジィISM</button>
+    <button class="tab" onclick="switchTab('sociometry', this)">ソシオメトリー</button>
+  </div>
+
+  <!-- 項目設定パネル -->
+  <div id="panel-items" class="panel active">
+    <div class="section">
+      <h3>項目の入力</h3>
+      <div class="excel-upload">
+        <label>Excelファイルから読み込み: </label>
+        <input type="file" id="excelFile" accept=".xlsx,.xlsm,.xls,.csv" onchange="loadExcel(event)" style="margin-top:6px;">
+        <div id="sheetSelector" class="hidden" style="margin-top:8px;">
+          <label style="font-size:0.85em; color:#666;">シートを選択: </label>
+          <select id="sheetSelect" onchange="onSheetSelected()" style="padding:4px 8px; border-radius:4px; border:1px solid #ccc;"></select>
+        </div>
+        <div id="loadModeSelector" class="hidden" style="margin-top:8px;">
+          <label style="font-size:0.85em; color:#666;">読み込みモード: </label>
+          <select id="loadMode" onchange="onLoadModeChanged()" style="padding:4px 8px; border-radius:4px; border:1px solid #ccc;">
+            <option value="items">項目名のみ（B列）</option>
+            <option value="ism">ISM用 行列データ</option>
+            <option value="dematel">DEMATEL用 行列データ</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="applyExcelLoad()" style="margin-left:8px;">読み込み実行</button>
+        </div>
+        <div id="excelStatus" style="font-size:0.8em; color:#666; margin-top:4px;">※ xlsx/xlsm/csv対応。項目名シート（B列）または行列データシートを選択できます。</div>
+      </div>
+      <div class="items-input">
+        <div style="flex:1">
+          <label style="font-size:0.85em; color:#666;">項目名（1行に1項目）</label>
+          <textarea id="itemsText" placeholder="長さ&#10;値段&#10;重量&#10;項目4&#10;..."></textarea>
+        </div>
+        <div class="help">
+          <p>1行に1つの項目名を入力してください。</p>
+          <p style="margin-top:8px;">最大250項目まで対応。</p>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" onclick="generateMatrix()">行列を生成</button>
+        <span id="itemCount" style="font-size:0.85em; color:#666;"></span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>サンプルデータ</h3>
+      <div class="sample-btns">
+        <button class="btn btn-warning btn-sm" onclick="loadSample('ism13')">ISM例題（13項目）</button>
+        <button class="btn btn-warning btn-sm" onclick="loadSample('pc_ism')">PC例題 ISM（15項目）</button>
+        <button class="btn btn-warning btn-sm" onclick="loadSample('car_ism')">自動車例題 ISM（27項目）</button>
+        <button class="btn btn-warning btn-sm" onclick="loadSample('pc_dematel')">PC例題 DEMATEL（15項目）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ISM法パネル -->
+  <div id="panel-ism" class="panel">
+    <div class="section">
+      <h3>隣接行列の入力</h3>
+      <p style="font-size:0.85em; color:#666; margin-bottom:8px;">
+        要素 i が要素 j に影響を与える場合は 1、そうでなければ 0 を入力してください。対角要素は自動的に0です。
+      </p>
+      <div id="ismMatrixContainer" class="matrix-container"></div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-success" onclick="runISM()">ISM法 実行</button>
+        <button class="btn btn-sm" style="background:#eee; margin-left:8px;" onclick="clearISMMatrix()">行列クリア</button>
+      </div>
+    </div>
+    <div id="ismResults" class="hidden"></div>
+  </div>
+
+  <!-- DEMATEL法パネル -->
+  <div id="panel-dematel" class="panel">
+    <div class="section">
+      <h3>直接影響行列の入力</h3>
+      <p style="font-size:0.85em; color:#666; margin-bottom:8px;">
+        要素 i が要素 j に与える影響の度合いを非負の数値で入力してください。対角要素は自動的に0です。
+      </p>
+      <div id="dematelMatrixContainer" class="matrix-container"></div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-success" onclick="runDEMATEL()">DEMATEL法 実行</button>
+        <button class="btn btn-sm" style="background:#eee; margin-left:8px;" onclick="clearDEMATELMatrix()">行列クリア</button>
+      </div>
+    </div>
+    <div id="dematelResults" class="hidden"></div>
+  </div>
+
+  <!-- 使用方法パネル -->
+  <div id="panel-help" class="panel">
+    <div class="section">
+      <h3>本ツールの使用方法</h3>
+      <div style="line-height:1.8; font-size:0.92em;">
+        <p>本ツールでは、<strong>ISM法</strong>の計算と<strong>DEMATEL法</strong>の計算ができます。要素数は250個まで取り扱えます。</p>
+
+        <h4 style="margin-top:16px; color:#2c3e50;">● 項目の作成</h4>
+        <ol style="padding-left:20px; margin-top:8px;">
+          <li>「項目設定」タブで項目名を1行に1つ入力するか、Excelファイルから読み込みます。</li>
+          <li>「行列を生成」ボタンを押すと、ISM法とDEMATEL法の入力行列が作成されます。</li>
+        </ol>
+
+        <h4 style="margin-top:16px; color:#2c3e50;">● ISM法の使用方法</h4>
+        <ol style="padding-left:20px; margin-top:8px;">
+          <li>「ISM法」タブに移動し、隣接行列に 0 か 1 の数値を入力します。</li>
+          <li>「ISM法 実行」ボタンを押すと、以下が計算されます：
+            <ul style="padding-left:20px; margin-top:4px;">
+              <li>隣接行列＋単位行列</li>
+              <li>可到達行列</li>
+              <li>集合R（各要素から到達可能な要素）</li>
+              <li>集合A（各要素に到達可能な要素）</li>
+              <li>階層構造</li>
+              <li>有向グラフ表示</li>
+            </ul>
+          </li>
+        </ol>
+
+        <h4 style="margin-top:16px; color:#2c3e50;">● DEMATEL法の使用方法</h4>
+        <ol style="padding-left:20px; margin-top:8px;">
+          <li>「DEMATEL法」タブに移動し、直接影響行列に非負の数値を入力します。</li>
+          <li>「DEMATEL法 実行」ボタンを押すと、以下が計算されます：
+            <ul style="padding-left:20px; margin-top:4px;">
+              <li>正規化行列</li>
+              <li>総合影響行列</li>
+              <li>行和(D)、列和(R)、関連度(D+R)、影響度(D-R)</li>
+              <li>影響度-関連度グラフ</li>
+            </ul>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ファジィDEMATEL法パネル -->
+  <div id="panel-fuzzyDematel" class="panel">
+    <div class="section">
+      <h3>ファジィDEMATEL法</h3>
+      <p style="font-size:0.88em;color:#666;margin-bottom:12px">言語変数で影響度を入力し、三角型ファジィ数で計算します。項目設定タブで項目を定義してから使用してください。</p>
+      <div style="margin-bottom:12px; padding:10px; background:#f0f7ff; border-radius:6px; font-size:0.85em">
+        <b>言語変数と三角型ファジィ数の対応：</b><br>
+        なし=(0,0,0.25)　弱=(0,0.25,0.5)　中=(0.25,0.5,0.75)　強=(0.5,0.75,1.0)　極強=(0.75,1.0,1.0)
+      </div>
+      <div class="matrix-container" id="fuzzyDematelMatrixContainer"></div>
+      <div style="margin-top:12px">
+        <button class="btn btn-success" onclick="runFuzzyDEMATEL()">ファジィDEMATEL 実行</button>
+        <button class="btn btn-sm" style="background:#eee; margin-left:8px;" onclick="generateFuzzyDematelMatrix()">行列再生成</button>
+      </div>
+      <div id="fuzzyDematelResults" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- ファジィISM法パネル -->
+  <div id="panel-fuzzyIsm" class="panel">
+    <div class="section">
+      <h3>ファジィISM法</h3>
+      <p style="font-size:0.88em;color:#666;margin-bottom:12px">影響関係を[0,1]の確信度で入力し、α-カットで階層構造を導出します。</p>
+      <div class="matrix-container" id="fuzzyIsmMatrixContainer"></div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+        <div>
+          <label style="font-size:0.85em">α閾値: <span id="fismAlphaVal" style="font-weight:bold;color:#e67e22;font-size:1.1em">0.50</span></label>
+          <input type="range" id="fismAlpha" min="0.05" max="0.95" step="0.05" value="0.50" style="width:200px" oninput="document.getElementById('fismAlphaVal').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <button class="btn btn-success" onclick="runFuzzyISM()">ファジィISM 実行</button>
+        <button class="btn btn-sm" style="background:#eee;" onclick="generateFuzzyIsmMatrix()">行列再生成</button>
+      </div>
+      <div id="fuzzyIsmResults" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- ソシオメトリー分析パネル -->
+  <div id="panel-sociometry" class="panel">
+    <div class="section">
+      <h3>ソシオメトリー分析（ファジィグラフ）</h3>
+      <p style="font-size:0.88em;color:#666;margin-bottom:12px">メンバー間の関係行列を入力し、ファジィグラフとクラスター分析を行います。</p>
+      <div style="margin-bottom:12px">
+        <label style="font-size:0.85em">メンバー名（カンマ区切り）</label>
+        <input type="text" id="socioMembers" value="A,B,C,D,E,F" style="padding:6px 10px; border:1px solid #ccc; border-radius:4px; width:100%; font-size:0.9em">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:0.85em">関係行列（対称行列、行ごとにカンマ区切り、改行で行を分ける。対角は1.0）</label>
+        <textarea id="socioMatrix" style="width:100%;min-height:120px;font-family:monospace;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:0.85em">1.0,0.8,0.3,0.5,0.2,0.4
+0.8,1.0,0.6,0.4,0.7,0.3
+0.3,0.6,1.0,0.2,0.5,0.8
+0.5,0.4,0.2,1.0,0.3,0.6
+0.2,0.7,0.5,0.3,1.0,0.4
+0.4,0.3,0.8,0.6,0.4,1.0</textarea>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+        <div>
+          <label style="font-size:0.85em">α閾値: <span id="socioAlphaVal" style="font-weight:bold;color:#e67e22;font-size:1.1em">0.50</span></label>
+          <input type="range" id="socioAlpha" min="0.05" max="0.95" step="0.05" value="0.50" style="width:200px" oninput="document.getElementById('socioAlphaVal').textContent=parseFloat(this.value).toFixed(2); if(window._socioData) runSociometry();">
+        </div>
+        <button class="btn btn-success" onclick="runSociometry()">分析実行</button>
+      </div>
+      <div id="socioResults" class="hidden"></div>
+    </div>
+  </div>
+
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ==================== グローバル変数 ====================
+let items = [];
+let ismMatrix = [];
+let dematelMatrix = [];
+
+// ==================== タブ切り替え ====================
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ==================== Excel読み込み ====================
+let loadedWorkbook = null;
+
+function loadExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      loadedWorkbook = XLSX.read(data, { type: 'array' });
+      // シート選択UIを表示
+      const sel = document.getElementById('sheetSelect');
+      sel.innerHTML = '';
+      loadedWorkbook.SheetNames.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      document.getElementById('sheetSelector').classList.remove('hidden');
+      document.getElementById('loadModeSelector').classList.remove('hidden');
+      onSheetSelected(); // 自動検出
+    } catch (err) {
+      alert('ファイルの読み込みに失敗しました: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function onSheetSelected() {
+  if (!loadedWorkbook) return;
+  const sheetName = document.getElementById('sheetSelect').value;
+  const sheet = loadedWorkbook.Sheets[sheetName];
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+
+  // 自動検出: C1セルに文字列があり、A3にも文字列があれば行列データ
+  const c1 = sheet[XLSX.utils.encode_cell({ r: 0, c: 2 })];
+  const a3 = sheet[XLSX.utils.encode_cell({ r: 2, c: 0 })];
+  const mode = document.getElementById('loadMode');
+
+  if (c1 && typeof c1.v === 'string' && a3 && typeof a3.v === 'string') {
+    // 行列データシート → ISMかDEMATELか推定
+    const name = sheetName.toLowerCase();
+    if (name.includes('dematel') || name.includes('dem')) {
+      mode.value = 'dematel';
+    } else {
+      mode.value = 'ism';
+    }
+    document.getElementById('excelStatus').textContent =
+      '行列データシートを検出しました。読み込みモードを確認して「読み込み実行」を押してください。';
+    document.getElementById('excelStatus').style.color = '#27ae60';
+  } else {
+    mode.value = 'items';
+    document.getElementById('excelStatus').textContent =
+      '項目名シートを検出しました。「読み込み実行」を押してください。';
+    document.getElementById('excelStatus').style.color = '#3498db';
+  }
+}
+
+function onLoadModeChanged() {}
+
+function applyExcelLoad() {
+  if (!loadedWorkbook) { alert('ファイルを選択してください。'); return; }
+  const sheetName = document.getElementById('sheetSelect').value;
+  const sheet = loadedWorkbook.Sheets[sheetName];
+  const mode = document.getElementById('loadMode').value;
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+
+  if (mode === 'items') {
+    // B列から項目名を読む
+    const names = [];
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r: r, c: 1 })];
+      if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
+        const v = String(cell.v).trim();
+        if (!isNaN(v) && names.length === 0) continue; // 数値のみの行頭はスキップ
+        if (typeof cell.v === 'string') names.push(v);
+      } else {
+        if (names.length > 0) break;
+      }
+    }
+    if (names.length === 0) {
+      alert('B列に項目名が見つかりません。');
+      return;
+    }
+    document.getElementById('itemsText').value = names.join('\n');
+    generateMatrix();
+    document.getElementById('excelStatus').textContent = names.length + '項目を読み込みました。';
+    document.getElementById('excelStatus').style.color = '#27ae60';
+  } else {
+    // 行列データシートを読む
+    // Row 1: C列以降に項目名, Row 2: インデックス, Row 3以降: データ
+    const itemNames = [];
+    for (let c = 2; c <= range.e.c; c++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r: 0, c: c })];
+      if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
+        itemNames.push(String(cell.v).trim());
+      } else {
+        break;
+      }
+    }
+    if (itemNames.length === 0) {
+      alert('C1列以降に項目名が見つかりません。行列データシートの形式を確認してください。');
+      return;
+    }
+    const n = itemNames.length;
+    const mat = Array.from({ length: n }, () => Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const cell = sheet[XLSX.utils.encode_cell({ r: i + 2, c: j + 2 })];
+        if (cell && cell.v !== undefined && cell.v !== null) {
+          mat[i][j] = Number(cell.v) || 0;
+        }
+      }
+    }
+    // 項目とマトリクスを設定
+    items = itemNames;
+    document.getElementById('itemsText').value = items.join('\n');
+    document.getElementById('itemCount').textContent = n + '項目の行列を生成しました。';
+
+    if (mode === 'ism') {
+      ismMatrix = mat;
+      dematelMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+      renderISMMatrix();
+      renderDEMATELMatrix();
+      switchTabDirect('ism');
+      document.getElementById('excelStatus').textContent = n + '項目のISM用行列データを読み込みました。';
+    } else {
+      dematelMatrix = mat;
+      ismMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+      renderISMMatrix();
+      renderDEMATELMatrix();
+      switchTabDirect('dematel');
+      document.getElementById('excelStatus').textContent = n + '項目のDEMATEL用行列データを読み込みました。';
+    }
+    document.getElementById('excelStatus').style.color = '#27ae60';
+
+    // 結果クリア
+    document.getElementById('ismResults').innerHTML = '';
+    document.getElementById('ismResults').classList.add('hidden');
+    document.getElementById('dematelResults').innerHTML = '';
+    document.getElementById('dematelResults').classList.add('hidden');
+  }
+}
+
+// ==================== 行列生成 ====================
+function generateMatrix() {
+  const text = document.getElementById('itemsText').value.trim();
+  if (!text) { alert('項目名を入力してください。'); return; }
+  items = text.split('\n').map(s => s.trim()).filter(s => s !== '');
+  if (items.length > 250) {
+    alert('項目数は250までです。超えた分は無視します。');
+    items = items.slice(0, 250);
+  }
+  const n = items.length;
+  document.getElementById('itemCount').textContent = n + '項目の行列を生成しました。';
+
+  // 行列初期化（既存データがあれば保持）
+  const oldIsm = ismMatrix.length === n ? ismMatrix.map(r => [...r]) : null;
+  const oldDem = dematelMatrix.length === n ? dematelMatrix.map(r => [...r]) : null;
+  ismMatrix = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => {
+    if (oldIsm) return oldIsm[i][j];
+    return 0;
+  }));
+  dematelMatrix = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => {
+    if (oldDem) return oldDem[i][j];
+    return 0;
+  }));
+
+  renderISMMatrix();
+  renderDEMATELMatrix();
+
+  // ISM/DEMATELの結果をクリア
+  document.getElementById('ismResults').innerHTML = '';
+  document.getElementById('ismResults').classList.add('hidden');
+  document.getElementById('dematelResults').innerHTML = '';
+  document.getElementById('dematelResults').classList.add('hidden');
+}
+
+// ==================== ISM行列表示 ====================
+function renderISMMatrix() {
+  const n = items.length;
+  if (n === 0) { document.getElementById('ismMatrixContainer').innerHTML = '<p style="color:#999;">まず「項目設定」タブで項目を入力してください。</p>'; return; }
+  let html = '<table class="matrix"><thead><tr><th class="corner"></th><th class="corner"></th>';
+  for (let j = 0; j < n; j++) html += `<th title="${items[j]}">${items[j]}</th>`;
+  html += '</tr><tr><th class="corner"></th><th class="corner"></th>';
+  for (let j = 0; j < n; j++) html += `<th>${j + 1}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td class="row-header" title="${items[i]}">${items[i]}</td><td class="row-header">${i + 1}</td>`;
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += '<td class="diagonal"></td>';
+      } else {
+        html += `<td><input type="number" min="0" max="1" value="${ismMatrix[i][j]}" onchange="updateISM(${i},${j},this.value)" onfocus="this.select()"></td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('ismMatrixContainer').innerHTML = html;
+}
+
+function updateISM(i, j, val) {
+  ismMatrix[i][j] = parseInt(val) || 0;
+}
+
+function clearISMMatrix() {
+  const n = items.length;
+  ismMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+  renderISMMatrix();
+  document.getElementById('ismResults').innerHTML = '';
+  document.getElementById('ismResults').classList.add('hidden');
+}
+
+// ==================== DEMATEL行列表示 ====================
+function renderDEMATELMatrix() {
+  const n = items.length;
+  if (n === 0) { document.getElementById('dematelMatrixContainer').innerHTML = '<p style="color:#999;">まず「項目設定」タブで項目を入力してください。</p>'; return; }
+  let html = '<table class="matrix"><thead><tr><th class="corner"></th><th class="corner"></th>';
+  for (let j = 0; j < n; j++) html += `<th title="${items[j]}">${items[j]}</th>`;
+  html += '</tr><tr><th class="corner"></th><th class="corner"></th>';
+  for (let j = 0; j < n; j++) html += `<th>${j + 1}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td class="row-header" title="${items[i]}">${items[i]}</td><td class="row-header">${i + 1}</td>`;
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += '<td class="diagonal"></td>';
+      } else {
+        html += `<td><input type="number" min="0" value="${dematelMatrix[i][j]}" onchange="updateDEMATEL(${i},${j},this.value)" onfocus="this.select()"></td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('dematelMatrixContainer').innerHTML = html;
+}
+
+function updateDEMATEL(i, j, val) {
+  dematelMatrix[i][j] = parseFloat(val) || 0;
+}
+
+function clearDEMATELMatrix() {
+  const n = items.length;
+  dematelMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+  renderDEMATELMatrix();
+  document.getElementById('dematelResults').innerHTML = '';
+  document.getElementById('dematelResults').classList.add('hidden');
+}
+
+// ==================== ISM法 計算 ====================
+function runISM() {
+  const n = items.length;
+  if (n === 0) { alert('項目を設定してください。'); return; }
+
+  // 隣接行列の読み取り
+  const A = ismMatrix.map(r => [...r]);
+
+  // 単位行列の加算
+  const ApI = A.map((r, i) => r.map((v, j) => i === j ? (v > 0 ? 1 : 1) : (v > 0 ? 1 : 0)));
+  for (let i = 0; i < n; i++) ApI[i][i] = 1;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (A[i][j] > 0) ApI[i][j] = 1;
+
+  // 可到達行列の計算：(A+I)^n をブール行列演算で収束するまで繰り返す
+  let B = ApI.map(r => [...r]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const C = Array.from({ length: n }, () => Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        let s = 0;
+        for (let k = 0; k < n; k++) s += B[i][k] * ApI[k][j];
+        C[i][j] = s > 0 ? 1 : 0;
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (C[i][j] !== B[i][j]) changed = true;
+      }
+    }
+    B = C;
+  }
+  const reach = B; // 可到達行列
+
+  // 集合R, A の計算
+  const setR = [], setA = [];
+  for (let i = 0; i < n; i++) {
+    setR[i] = [];
+    setA[i] = [];
+    for (let j = 0; j < n; j++) {
+      if (reach[i][j] === 1) setR[i].push(j + 1);
+      if (reach[j][i] === 1) setA[i].push(j + 1);
+    }
+  }
+
+  // 階層の計算
+  const reachCopy = reach.map(r => [...r]);
+  const hierarchy = [];
+  let remaining = n;
+  while (remaining > 0) {
+    const level = [];
+    for (let i = 0; i < n; i++) {
+      // 要素がまだ残っているか
+      let isActive = false;
+      for (let j = 0; j < n; j++) {
+        if (reachCopy[i][j] === 1) { isActive = true; break; }
+      }
+      if (!isActive) continue;
+
+      // R(i) ⊆ A(i) かチェック（R(i)∩A(i) = R(i)）
+      let isTop = true;
+      for (let j = 0; j < n; j++) {
+        if (reachCopy[i][j] === 1 && reachCopy[j][i] === 0) {
+          isTop = false;
+          break;
+        }
+      }
+      if (isTop) {
+        level.push(i + 1);
+        remaining--;
+      }
+    }
+    // 抽出した要素を行列から削除
+    for (const idx of level) {
+      for (let j = 0; j < n; j++) {
+        reachCopy[idx - 1][j] = 0;
+        reachCopy[j][idx - 1] = 0;
+      }
+    }
+    if (level.length > 0) hierarchy.push(level);
+    else break;
+  }
+
+  // 結果表示
+  displayISMResults(ApI, reach, setR, setA, hierarchy);
+}
+
+function displayISMResults(ApI, reach, setR, setA, hierarchy) {
+  const n = items.length;
+  let html = '';
+
+  // 隣接行列＋単位行列
+  html += '<div class="result-section"><h4>隣接行列＋単位行列</h4>';
+  html += matrixToHTML(ApI, items);
+  html += '</div>';
+
+  // 可到達行列
+  html += '<div class="result-section"><h4>可到達行列</h4>';
+  html += matrixToHTML(reach, items);
+  html += '</div>';
+
+  // 集合R
+  html += '<div class="result-section"><h4>要素集合R（到達可能集合）</h4>';
+  for (let i = 0; i < n; i++) {
+    html += `<div class="set-display"><span class="set-label">${items[i]}:</span> R(${i + 1}) = { ${setR[i].join(', ')} }</div>`;
+  }
+  html += '</div>';
+
+  // 集合A
+  html += '<div class="result-section"><h4>要素集合A（先行集合）</h4>';
+  for (let i = 0; i < n; i++) {
+    html += `<div class="set-display"><span class="set-label">${items[i]}:</span> A(${i + 1}) = { ${setA[i].join(', ')} }</div>`;
+  }
+  html += '</div>';
+
+  // 階層
+  html += '<div class="result-section"><h4>階層構造</h4><div class="hierarchy-display">';
+  for (let lv = 0; lv < hierarchy.length; lv++) {
+    html += `<div class="hierarchy-level"><span class="level-num">レベル ${lv + 1}</span><div class="level-items">`;
+    for (const idx of hierarchy[lv]) {
+      html += `<span>${items[idx - 1]} (${idx})</span>`;
+    }
+    html += '</div></div>';
+  }
+  html += '</div></div>';
+
+  // 有向グラフ（SVG）
+  html += '<div class="result-section"><h4>階層構造グラフ</h4>';
+  html += '<div class="graph-container" id="ismGraphContainer"></div>';
+  html += '</div>';
+
+  const results = document.getElementById('ismResults');
+  results.innerHTML = html;
+  results.classList.remove('hidden');
+
+  drawISMGraph(hierarchy);
+}
+
+// ==================== ISMグラフ描画 ====================
+function drawISMGraph(hierarchy) {
+  const n = items.length;
+  const A = ismMatrix; // 元の隣接行列
+
+  // 各要素の位置を計算
+  const positions = {};
+  const levelWidth = 800;
+  const levelHeight = 90;
+  const svgWidth = Math.max(levelWidth + 100, 900);
+  const totalLevels = hierarchy.length;
+  const svgHeight = totalLevels * levelHeight + 100;
+
+  // 階層を下から上に配置（最上位階層が一番上）
+  for (let lv = 0; lv < hierarchy.length; lv++) {
+    const elems = hierarchy[lv];
+    const y = 50 + lv * levelHeight;
+    for (let k = 0; k < elems.length; k++) {
+      const x = (svgWidth / (elems.length + 1)) * (k + 1);
+      positions[elems[k]] = { x, y };
+    }
+  }
+
+  // SVG生成
+  let svg = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#666"/></marker></defs>';
+
+  // 矢印描画（元の隣接行列の関係のみ）
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (A[i][j] === 1 && i !== j) {
+        const from = positions[i + 1];
+        const to = positions[j + 1];
+        if (from && to) {
+          // ノードの中心からの角度を計算して、円の縁から矢印を出す
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist === 0) continue;
+          const r = 18;
+          const x1 = from.x + (dx / dist) * r;
+          const y1 = from.y + (dy / dist) * r;
+          const x2 = to.x - (dx / dist) * (r + 5);
+          const y2 = to.y - (dy / dist) * (r + 5);
+          svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#999" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
+        }
+      }
+    }
+  }
+
+  // ノード描画
+  for (let idx = 1; idx <= n; idx++) {
+    const pos = positions[idx];
+    if (!pos) continue;
+    svg += `<circle cx="${pos.x}" cy="${pos.y}" r="18" fill="#3498db" stroke="#2c3e50" stroke-width="1.5"/>`;
+    svg += `<text x="${pos.x}" y="${pos.y + 4}" text-anchor="middle" fill="white" font-size="11" font-weight="bold">${idx}</text>`;
+  }
+
+  svg += '</svg>';
+  document.getElementById('ismGraphContainer').innerHTML = svg;
+}
+
+// ==================== DEMATEL法 計算 ====================
+function runDEMATEL() {
+  const n = items.length;
+  if (n === 0) { alert('項目を設定してください。'); return; }
+
+  // 直接影響行列の読み取り
+  const A = dematelMatrix.map(r => [...r]);
+
+  // 正規化: max(行和, 列和) で割る
+  let mx = 0;
+  for (let i = 0; i < n; i++) {
+    let rowSum = 0, colSum = 0;
+    for (let j = 0; j < n; j++) {
+      rowSum += A[i][j];
+      colSum += A[j][i];
+    }
+    mx = Math.max(mx, rowSum, colSum);
+  }
+
+  if (mx === 0) { alert('行列が全てゼロです。値を入力してください。'); return; }
+
+  const N = A.map(r => r.map(v => v / mx)); // 正規化行列
+
+  // 総合影響行列 T = N * (I - N)^(-1)
+  // まず (I - N) を計算
+  const ImN = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => (i === j ? 1 : 0) - N[i][j])
+  );
+
+  // LU分解で (I-N) の逆行列を求める
+  const L = Array.from({ length: n }, () => Array(n).fill(0));
+  const U = ImN.map(r => [...r]);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      U[j][i] = U[j][i] / U[i][i];
+      for (let k = i + 1; k < n; k++) {
+        U[j][k] = U[j][k] - U[i][k] * U[j][i];
+      }
+    }
+  }
+
+  // 逆行列を求める
+  const inv = Array.from({ length: n }, () => Array(n).fill(0));
+  for (let col = 0; col < n; col++) {
+    const b = Array(n).fill(0);
+    b[col] = 1;
+    // 前進代入
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let j = 0; j < i; j++) s += U[i][j] * b[j];  // U[i][j] stores L factor for j < i
+      b[i] = b[i] - s;
+    }
+    // 後退代入
+    for (let i = n - 1; i >= 0; i--) {
+      let s = 0;
+      for (let j = i + 1; j < n; j++) s += U[i][j] * b[j];
+      b[i] = (b[i] - s) / U[i][i];
+    }
+    for (let i = 0; i < n; i++) inv[i][col] = b[i];
+  }
+
+  // T = N * inv(I-N)
+  const T = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => {
+      let s = 0;
+      for (let k = 0; k < n; k++) s += N[i][k] * inv[k][j];
+      return s;
+    })
+  );
+
+  // D (行和), R (列和)
+  const D = Array(n).fill(0);
+  const R = Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      D[i] += T[i][j];
+      R[i] += T[j][i];
+    }
+  }
+
+  const DpR = D.map((d, i) => d + R[i]);
+  const DmR = D.map((d, i) => d - R[i]);
+
+  displayDEMATELResults(N, T, D, R, DpR, DmR);
+}
+
+function displayDEMATELResults(N, T, D, R, DpR, DmR) {
+  const n = items.length;
+  let html = '';
+
+  // 正規化行列
+  html += '<div class="result-section"><h4>正規化行列</h4>';
+  html += matrixToHTMLFloat(N, items);
+  html += '</div>';
+
+  // 総合影響行列
+  html += '<div class="result-section"><h4>総合影響行列</h4>';
+  html += matrixToHTMLFloat(T, items);
+  html += '</div>';
+
+  // D, R, D+R, D-R
+  html += '<div class="result-section"><h4>行和・列和・関連度・影響度</h4>';
+  html += '<table class="result"><thead><tr><th>要素</th><th>D (行和)</th><th>R (列和)</th><th>D+R (関連度)</th><th>D-R (影響度)</th></tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td class="label">${items[i]} (${i + 1})</td><td>${D[i].toFixed(4)}</td><td>${R[i].toFixed(4)}</td><td class="highlight">${DpR[i].toFixed(4)}</td><td class="highlight">${DmR[i].toFixed(4)}</td></tr>`;
+  }
+  html += '</tbody></table></div>';
+
+  // 影響度-関連度グラフ（SVG）
+  html += '<div class="result-section"><h4>影響度-関連度グラフ</h4>';
+  html += '<div class="chart-container" id="dematelChartContainer"></div></div>';
+
+  const results = document.getElementById('dematelResults');
+  results.innerHTML = html;
+  results.classList.remove('hidden');
+
+  drawDEMATELChart(DpR, DmR);
+}
+
+// ==================== DEMATEL散布図描画 ====================
+function drawDEMATELChart(DpR, DmR) {
+  const n = items.length;
+  const padding = 60;
+  const w = 700, h = 500;
+
+  const minX = Math.min(...DpR) * 0.9;
+  const maxX = Math.max(...DpR) * 1.1;
+  const minY = Math.min(...DmR);
+  const maxY = Math.max(...DmR);
+  const rangeY = Math.max(Math.abs(minY), Math.abs(maxY)) * 1.2;
+
+  const scaleX = (v) => padding + (v - minX) / (maxX - minX) * (w - 2 * padding);
+  const scaleY = (v) => (h / 2) - (v / rangeY) * (h / 2 - padding);
+
+  let svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" style="font-family:sans-serif;">`;
+
+  // 軸
+  svg += `<line x1="${padding}" y1="${h / 2}" x2="${w - padding}" y2="${h / 2}" stroke="#ccc" stroke-width="1"/>`;
+  svg += `<line x1="${padding}" y1="${padding}" x2="${padding}" y2="${h - padding}" stroke="#ccc" stroke-width="1"/>`;
+
+  // 軸ラベル
+  svg += `<text x="${w / 2}" y="${h - 10}" text-anchor="middle" font-size="13" fill="#333">D+R (関連度)</text>`;
+  svg += `<text x="15" y="${h / 2}" text-anchor="middle" font-size="13" fill="#333" transform="rotate(-90, 15, ${h / 2})">D-R (影響度)</text>`;
+
+  // 目盛り
+  const xTicks = 6, yTicks = 6;
+  for (let i = 0; i <= xTicks; i++) {
+    const v = minX + (maxX - minX) * i / xTicks;
+    const x = scaleX(v);
+    svg += `<line x1="${x}" y1="${h / 2 - 3}" x2="${x}" y2="${h / 2 + 3}" stroke="#999" stroke-width="1"/>`;
+    svg += `<text x="${x}" y="${h / 2 + 16}" text-anchor="middle" font-size="10" fill="#666">${v.toFixed(2)}</text>`;
+  }
+  for (let i = -yTicks / 2; i <= yTicks / 2; i++) {
+    const v = rangeY * i / (yTicks / 2);
+    const y = scaleY(v);
+    svg += `<line x1="${padding - 3}" y1="${y}" x2="${padding + 3}" y2="${y}" stroke="#999" stroke-width="1"/>`;
+    svg += `<text x="${padding - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#666">${v.toFixed(2)}</text>`;
+  }
+
+  // プロット
+  const colors = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#2c3e50', '#d35400', '#c0392b', '#16a085', '#8e44ad', '#2980b9', '#f1c40f', '#34495e'];
+  for (let i = 0; i < n; i++) {
+    const x = scaleX(DpR[i]);
+    const y = scaleY(DmR[i]);
+    const color = colors[i % colors.length];
+    svg += `<circle cx="${x}" cy="${y}" r="6" fill="${color}" stroke="white" stroke-width="1.5"/>`;
+    svg += `<text x="${x + 10}" y="${y + 4}" font-size="11" fill="${color}" font-weight="600">${items[i]}</text>`;
+  }
+
+  svg += '</svg>';
+  document.getElementById('dematelChartContainer').innerHTML = svg;
+}
+
+// ==================== 行列をHTML表に変換 ====================
+function matrixToHTML(mat, labels) {
+  const n = mat.length;
+  let html = '<div class="matrix-container"><table class="result"><thead><tr><th></th><th></th>';
+  for (let j = 0; j < n; j++) html += `<th title="${labels[j]}">${j + 1}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td class="label" title="${labels[i]}">${labels[i]}</td><td class="label">${i + 1}</td>`;
+    for (let j = 0; j < n; j++) {
+      html += `<td>${mat[i][j]}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function matrixToHTMLFloat(mat, labels) {
+  const n = mat.length;
+  let html = '<div class="matrix-container"><table class="result"><thead><tr><th></th><th></th>';
+  for (let j = 0; j < n; j++) html += `<th title="${labels[j]}">${j + 1}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td class="label" title="${labels[i]}">${labels[i]}</td><td class="label">${i + 1}</td>`;
+    for (let j = 0; j < n; j++) {
+      html += `<td>${mat[i][j].toFixed(4)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ==================== サンプルデータ ====================
+function loadSample(type) {
+  if (type === 'ism13') {
+    items = ['長さ', '値段', '重量', '項目4', '項目5', '項目6', '項目7', '項目8', '項目9', '項目10', '項目11', '項目12', '項目13'];
+    document.getElementById('itemsText').value = items.join('\n');
+    const n = 13;
+    ismMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    dematelMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    // 隣接行列データ（エクセルの実行例(IMS)より）
+    const edges = [
+      [0,1],[0,10],
+      [1,8],[1,12],
+      [2,1],[2,8],[2,12],
+      [3,8],
+      [4,0],[4,1],[4,2],[4,3],[4,9],[4,10],[4,12],
+      [5,0],[5,1],[5,3],[5,6],[5,7],[5,8],[5,12],
+      [8,3],
+      [9,1],[9,2],[9,3],[9,8],[9,12],
+      [10,0],[10,1],[10,8],
+      [11,0],[11,1],[11,3],[11,5],[11,6],[11,7],[11,8],[11,9],[11,12]
+    ];
+    for (const [i, j] of edges) ismMatrix[i][j] = 1;
+    document.getElementById('itemCount').textContent = n + '項目の行列を生成しました。';
+    renderISMMatrix();
+    renderDEMATELMatrix();
+    switchTabDirect('ism');
+  } else if (type === 'pc_ism') {
+    items = ['処理性能', '記憶容量', '操作性', '安定性', '静音性', '視認性', '強度耐久性', '信頼性', '音響性', '消費電力', '携帯性', 'サイズ', '拡張性', 'スタイル', '無公害性'];
+    document.getElementById('itemsText').value = items.join('\n');
+    const n = 15;
+    ismMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    dematelMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    // 例題_PC3のデータ
+    const edges = [
+      [0,1],[0,2],[0,3],[0,7],
+      [1,0],
+      [2,3],[2,10],
+      [3,7],
+      [4,8],[4,10],
+      [5,2],[5,13],
+      [6,7],[6,10],
+      [7,3],
+      [9,0],[9,1],[9,4],[9,10],[9,11],
+      [11,0],[11,1],[11,2],[11,5],[11,10],[11,13],
+      [12,0],[12,1],
+      [13,2],[13,5],[13,10],[13,12]
+    ];
+    for (const [i, j] of edges) ismMatrix[i][j] = 1;
+    document.getElementById('itemCount').textContent = n + '項目の行列を生成しました。';
+    renderISMMatrix();
+    renderDEMATELMatrix();
+    switchTabDirect('ism');
+  } else if (type === 'car_ism') {
+    items = ['スタイル，レイアウト', 'ドライバリティ', '操縦性', '安定性', '振動', '騒音', '乗心地', '居住性', '視認性', '空調性能', '強度', '耐久性', '整備性', '信頼性', '安全性', '排ガス清浄性', '燃料経済性', 'ブレーキ性能', '高速安定性', '登坂力', '加速性', 'アフターサービス', '室内の広さ', 'ボデーサイズ', '旋回性能', 'トランクサイズ', '無公害性'];
+    document.getElementById('itemsText').value = items.join('\n');
+    const n = 27;
+    ismMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    dematelMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    const edges = [
+      [1,14],
+      [2,1],[2,14],
+      [3,1],[3,6],[3,14],
+      [4,5],[4,6],[4,7],[4,11],[4,13],
+      [5,6],[5,7],
+      [6,7],
+      [8,0],[8,1],[8,2],[8,7],[8,14],
+      [9,6],[9,7],
+      [10,11],[10,13],[10,14],
+      [11,10],[11,13],[11,14],
+      [12,13],[12,14],
+      [15,26],  // 排ガス清浄性→無公害性 (extra col mapping)
+      [17,1],[17,2],[17,14],
+      [18,1],[18,2],[18,3],[18,14],
+      [19,1],
+      [20,1],[20,14],[20,19],
+      [21,11],[21,12],[21,14],
+      [22,6],[22,7],
+      [23,0],[23,1],[23,3],[23,6],[23,7],[23,14],[23,16],[23,18],[23,22],
+      [24,1],[24,2],[24,14],
+      [25,7]
+    ];
+    for (const [i, j] of edges) ismMatrix[i][j] = 1;
+    document.getElementById('itemCount').textContent = n + '項目の行列を生成しました。';
+    renderISMMatrix();
+    renderDEMATELMatrix();
+    switchTabDirect('ism');
+  } else if (type === 'pc_dematel') {
+    items = ['処理性能', '記憶容量', '操作性', '安定性', '静音性', '視認性', '強度耐久性', '信頼性', '音響性', '消費電力', '携帯性', 'サイズ', '拡張性', 'スタイル', '無公害性'];
+    document.getElementById('itemsText').value = items.join('\n');
+    const n = 15;
+    ismMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    dematelMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+    // 例題_PC2のDEMATELデータ
+    dematelMatrix[0][1] = 2; dematelMatrix[0][2] = 4; dematelMatrix[0][3] = 4; dematelMatrix[0][7] = 4;
+    dematelMatrix[1][0] = 2;
+    dematelMatrix[2][3] = 4; dematelMatrix[2][10] = 4;
+    dematelMatrix[3][7] = 8;
+    dematelMatrix[4][8] = 4; dematelMatrix[4][10] = 2;
+    dematelMatrix[5][2] = 4; dematelMatrix[5][13] = 2;
+    dematelMatrix[6][7] = 4; dematelMatrix[6][10] = 4;
+    dematelMatrix[7][3] = 8;
+    dematelMatrix[9][0] = 4; dematelMatrix[9][1] = 4; dematelMatrix[9][4] = 2; dematelMatrix[9][10] = 8; dematelMatrix[9][11] = 4;
+    dematelMatrix[11][0] = 2; dematelMatrix[11][1] = 2; dematelMatrix[11][2] = 2; dematelMatrix[11][5] = 2; dematelMatrix[11][10] = 8; dematelMatrix[11][13] = 4;
+    dematelMatrix[13][2] = 4; dematelMatrix[13][5] = 4; dematelMatrix[13][10] = 2;
+    document.getElementById('itemCount').textContent = n + '項目の行列を生成しました。';
+    renderISMMatrix();
+    renderDEMATELMatrix();
+    switchTabDirect('dematel');
+  }
+}
+
+function switchTabDirect(tab) {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.remove('active');
+    if (t.textContent.includes(tab === 'ism' ? 'ISM' : tab === 'dematel' ? 'DEMATEL' : tab === 'items' ? '項目' : '使用')) t.classList.add('active');
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ==================== ファジィDEMATEL ====================
+const FUZZY_LABELS = ['なし','弱','中','強','極強'];
+const FUZZY_TFN = [[0,0,0.25],[0,0.25,0.5],[0.25,0.5,0.75],[0.5,0.75,1.0],[0.75,1.0,1.0]];
+let fDematelSelects = [];
+
+function generateFuzzyDematelMatrix() {
+  const n = items.length;
+  if (n === 0) { alert('項目設定タブで項目を定義してください'); return; }
+  let html = '<table class="matrix"><thead><tr><th class="corner"></th>';
+  for (let j = 0; j < n; j++) html += `<th title="${items[j]}">${j+1}</th>`;
+  html += '</tr></thead><tbody>';
+  fDematelSelects = [];
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td class="row-header" title="${items[i]}">${items[i].substring(0,6)}</td>`;
+    fDematelSelects[i] = [];
+    for (let j = 0; j < n; j++) {
+      if (i === j) { html += '<td class="diagonal">-</td>'; fDematelSelects[i][j] = -1; }
+      else {
+        const id = `fd_${i}_${j}`;
+        html += `<td><select id="${id}" style="width:50px;font-size:0.8em;padding:1px">`;
+        FUZZY_LABELS.forEach((l,k) => html += `<option value="${k}">${l}</option>`);
+        html += '</select></td>';
+        fDematelSelects[i][j] = 0;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('fuzzyDematelMatrixContainer').innerHTML = html;
+}
+
+function runFuzzyDEMATEL() {
+  const n = items.length;
+  if (n === 0) { alert('項目を設定してください'); return; }
+  // Read fuzzy matrix
+  const FA = []; // each element is [l,m,u]
+  for (let i = 0; i < n; i++) {
+    FA[i] = [];
+    for (let j = 0; j < n; j++) {
+      if (i === j) { FA[i][j] = [0,0,0]; continue; }
+      const sel = document.getElementById(`fd_${i}_${j}`);
+      if (!sel) { FA[i][j] = [0,0,0]; continue; }
+      FA[i][j] = [...FUZZY_TFN[parseInt(sel.value)]];
+    }
+  }
+  // Defuzzify using centroid method for all computations
+  const crisp = FA.map(row => row.map(v => (v[0]+v[1]+v[2])/3));
+  // Run standard DEMATEL on defuzzified matrix
+  let mx = 0;
+  for (let i = 0; i < n; i++) { let rs=0,cs=0; for(let j=0;j<n;j++){rs+=crisp[i][j];cs+=crisp[j][i];} mx=Math.max(mx,rs,cs); }
+  if (mx === 0) { alert('全てゼロです'); return; }
+  const N = crisp.map(r => r.map(v => v/mx));
+  // Also compute with lower and upper bounds for fuzzy intervals
+  const crispL = FA.map(row => row.map(v => v[0]));
+  const crispU = FA.map(row => row.map(v => v[2]));
+  let mxL=0, mxU=0;
+  for(let i=0;i<n;i++){let rsL=0,rsU=0,csL=0,csU=0;for(let j=0;j<n;j++){rsL+=crispL[i][j];rsU+=crispU[i][j];csL+=crispL[j][i];csU+=crispU[j][i];}mxL=Math.max(mxL,rsL,csL);mxU=Math.max(mxU,rsU,csU);}
+  // Compute T for center, lower, upper
+  function computeT(mat, maxVal) {
+    const nn = mat.length;
+    const Nm = mat.map(r=>r.map(v=>v/maxVal));
+    const ImN = Array.from({length:nn},(_,i)=>Array.from({length:nn},(_,j)=>(i===j?1:0)-Nm[i][j]));
+    // Invert using LU
+    const U2 = ImN.map(r=>[...r]);
+    for(let i=0;i<nn;i++)for(let j=i+1;j<nn;j++){U2[j][i]=U2[j][i]/U2[i][i];for(let k=i+1;k<nn;k++)U2[j][k]-=U2[i][k]*U2[j][i];}
+    const inv=Array.from({length:nn},()=>Array(nn).fill(0));
+    for(let col=0;col<nn;col++){const b=Array(nn).fill(0);b[col]=1;for(let i=0;i<nn;i++){let s=0;for(let j=0;j<i;j++)s+=U2[i][j]*b[j];b[i]-=s;}for(let i=nn-1;i>=0;i--){let s=0;for(let j=i+1;j<nn;j++)s+=U2[i][j]*b[j];b[i]=(b[i]-s)/U2[i][i];}for(let i=0;i<nn;i++)inv[i][col]=b[i];}
+    const T=Array.from({length:nn},(_,i)=>Array.from({length:nn},(_,j)=>{let s=0;for(let k=0;k<nn;k++)s+=Nm[i][k]*inv[k][j];return s;}));
+    return T;
+  }
+  const Tc = computeT(crisp, mx);
+  const Dc=[],Rc=[];
+  for(let i=0;i<n;i++){Dc[i]=0;Rc[i]=0;for(let j=0;j<n;j++){Dc[i]+=Tc[i][j];Rc[i]+=Tc[j][i];}}
+  const DpR=Dc.map((d,i)=>d+Rc[i]), DmR=Dc.map((d,i)=>d-Rc[i]);
+  // Compute intervals (lower/upper bound approximation)
+  let TL, TU, DL=[],DU=[],RL=[],RU=[];
+  try {
+    TL = computeT(crispL, mxU||1); TU = computeT(crispU, mxL||1);
+    for(let i=0;i<n;i++){DL[i]=0;DU[i]=0;RL[i]=0;RU[i]=0;for(let j=0;j<n;j++){DL[i]+=TL[i][j];DU[i]+=TU[i][j];RL[i]+=TL[j][i];RU[i]+=TU[j][i];}}
+  } catch(e) { DL=Dc.map(v=>v*.8);DU=Dc.map(v=>v*1.2);RL=Rc.map(v=>v*.8);RU=Rc.map(v=>v*1.2); }
+
+  // Display results
+  let html = '<div class="result-section"><h4>ファジィDEMATEL結果：D, R, D+R, D-R（ファジィ区間付き）</h4>';
+  html += '<table class="result"><thead><tr><th>要素</th><th>D (中心)</th><th>R (中心)</th><th>D+R</th><th>D-R</th><th>D+R区間</th><th>D-R区間</th></tr></thead><tbody>';
+  for (let i=0;i<n;i++) {
+    const dprl = DL[i]+RL[i], dpru = DU[i]+RU[i];
+    const dmrl = DL[i]-RU[i], dmru = DU[i]-RL[i];
+    html += `<tr><td class="label">${items[i]}</td><td>${Dc[i].toFixed(3)}</td><td>${Rc[i].toFixed(3)}</td><td class="highlight">${DpR[i].toFixed(3)}</td><td class="highlight">${DmR[i].toFixed(3)}</td><td>[${dprl.toFixed(2)}, ${dpru.toFixed(2)}]</td><td>[${dmrl.toFixed(2)}, ${dmru.toFixed(2)}]</td></tr>`;
+  }
+  html += '</tbody></table></div>';
+  // Chart with error bars
+  html += '<div class="result-section"><h4>影響度-関連度グラフ（ファジィ区間表示）</h4>';
+  html += '<div class="chart-container" id="fuzzyDematelChartContainer"></div></div>';
+  document.getElementById('fuzzyDematelResults').innerHTML = html;
+  document.getElementById('fuzzyDematelResults').classList.remove('hidden');
+  // Draw chart
+  const pad=60, w=700, h=500;
+  const allDpR = DpR.concat(DL.map((v,i)=>v+RL[i])).concat(DU.map((v,i)=>v+RU[i]));
+  const allDmR = DmR.concat(DL.map((v,i)=>v-RU[i])).concat(DU.map((v,i)=>v-RL[i]));
+  const minX=Math.min(...allDpR)*.9, maxX=Math.max(...allDpR)*1.1;
+  const rangeY=Math.max(Math.abs(Math.min(...allDmR)),Math.abs(Math.max(...allDmR)))*1.3;
+  const sx=v=>pad+(v-minX)/(maxX-minX)*(w-2*pad), sy=v=>h/2-v/rangeY*(h/2-pad);
+  let svg=`<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" style="font-family:sans-serif">`;
+  svg+=`<line x1="${pad}" y1="${h/2}" x2="${w-pad}" y2="${h/2}" stroke="#ccc"/><line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="#ccc"/>`;
+  svg+=`<text x="${w/2}" y="${h-10}" text-anchor="middle" font-size="13">D+R (関連度)</text><text x="15" y="${h/2}" text-anchor="middle" font-size="13" transform="rotate(-90,15,${h/2})">D-R (影響度)</text>`;
+  const colors=['#e74c3c','#3498db','#27ae60','#f39c12','#9b59b6','#1abc9c','#e67e22','#2c3e50','#d35400','#c0392b','#16a085','#8e44ad','#2980b9','#f1c40f','#34495e'];
+  for(let i=0;i<n;i++){
+    const cx2=sx(DpR[i]),cy2=sy(DmR[i]),col=colors[i%colors.length];
+    const dprl=DL[i]+RL[i],dpru=DU[i]+RU[i],dmrl=DL[i]-RU[i],dmru=DU[i]-RL[i];
+    // Error bars
+    svg+=`<line x1="${sx(dprl)}" y1="${cy2}" x2="${sx(dpru)}" y2="${cy2}" stroke="${col}" stroke-width="2" opacity=".4"/>`;
+    svg+=`<line x1="${cx2}" y1="${sy(dmrl)}" x2="${cx2}" y2="${sy(dmru)}" stroke="${col}" stroke-width="2" opacity=".4"/>`;
+    // Ellipse for uncertainty
+    svg+=`<ellipse cx="${cx2}" cy="${cy2}" rx="${Math.abs(sx(dpru)-sx(dprl))/2}" ry="${Math.abs(sy(dmru)-sy(dmrl))/2}" fill="${col}" fill-opacity=".08" stroke="${col}" stroke-width=".5" stroke-dasharray="3,3"/>`;
+    svg+=`<circle cx="${cx2}" cy="${cy2}" r="6" fill="${col}" stroke="white" stroke-width="1.5"/>`;
+    svg+=`<text x="${cx2+10}" y="${cy2+4}" font-size="11" fill="${col}" font-weight="600">${items[i]}</text>`;
+  }
+  svg+='</svg>';
+  document.getElementById('fuzzyDematelChartContainer').innerHTML=svg;
+}
+
+// ==================== ファジィISM ====================
+let fIsmMatrix = [];
+
+function generateFuzzyIsmMatrix() {
+  const n = items.length;
+  if (n===0) { alert('項目設定タブで項目を定義してください'); return; }
+  fIsmMatrix = Array.from({length:n},()=>Array(n).fill(0));
+  let html = '<table class="matrix"><thead><tr><th class="corner"></th>';
+  for(let j=0;j<n;j++) html+=`<th title="${items[j]}">${j+1}</th>`;
+  html+='</tr></thead><tbody>';
+  for(let i=0;i<n;i++){
+    html+=`<tr><td class="row-header" title="${items[i]}">${items[i].substring(0,6)}</td>`;
+    for(let j=0;j<n;j++){
+      if(i===j) html+='<td class="diagonal">-</td>';
+      else html+=`<td><input id="fi_${i}_${j}" value="0" style="width:40px" onchange="fIsmMatrix[${i}][${j}]=parseFloat(this.value)||0"></td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  document.getElementById('fuzzyIsmMatrixContainer').innerHTML=html;
+}
+
+function runFuzzyISM() {
+  const n = items.length;
+  if (n===0) { alert('項目を設定してください'); return; }
+  const alpha = parseFloat(document.getElementById('fismAlpha').value);
+  // Read matrix
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) {
+    if(i!==j){ const el=document.getElementById(`fi_${i}_${j}`); if(el) fIsmMatrix[i][j]=parseFloat(el.value)||0; }
+  }
+  // α-cut: create crisp matrix
+  const A = fIsmMatrix.map(r=>r.map(v=>v>=alpha?1:0));
+  // Run standard ISM on crisp matrix
+  const ApI = A.map((r,i)=>r.map((v,j)=>i===j?1:(v>0?1:0)));
+  let B = ApI.map(r=>[...r]);
+  let changed=true;
+  while(changed){changed=false;const C=Array.from({length:n},()=>Array(n).fill(0));for(let i=0;i<n;i++)for(let j=0;j<n;j++){let s=0;for(let k=0;k<n;k++)s+=B[i][k]*ApI[k][j];C[i][j]=s>0?1:0;}for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(C[i][j]!==B[i][j])changed=true;B=C;}
+  const reach=B;
+  // Hierarchy
+  const rc=reach.map(r=>[...r]);const hierarchy=[];let rem=n;
+  while(rem>0){const lv=[];for(let i=0;i<n;i++){let act=false;for(let j=0;j<n;j++)if(rc[i][j]===1){act=true;break;}if(!act)continue;let top=true;for(let j=0;j<n;j++)if(rc[i][j]===1&&rc[j][i]===0){top=false;break;}if(top){lv.push(i+1);rem--;}}for(const idx of lv){for(let j=0;j<n;j++){rc[idx-1][j]=0;rc[j][idx-1]=0;}}if(lv.length>0)hierarchy.push(lv);else break;}
+  // Display
+  let html = `<div class="result-section"><h4>α = ${alpha.toFixed(2)} でのクリスプ隣接行列</h4>`;
+  html += matrixToHTML(A, items) + '</div>';
+  html += '<div class="result-section"><h4>可到達行列</h4>' + matrixToHTML(reach, items) + '</div>';
+  html += '<div class="result-section"><h4>階層構造</h4><div class="hierarchy-display">';
+  for(let lv=0;lv<hierarchy.length;lv++){
+    html+=`<div class="hierarchy-level"><span class="level-num">レベル ${lv+1}</span><div class="level-items">`;
+    for(const idx of hierarchy[lv]) html+=`<span>${items[idx-1]} (${idx})</span>`;
+    html+='</div></div>';
+  }
+  html+='</div></div>';
+  // Count edges at different alpha levels
+  html += '<div class="result-section"><h4>α値と構造変化</h4><div style="font-size:0.88em">';
+  [0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9].forEach(a=>{
+    let ec=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(i!==j&&fIsmMatrix[i][j]>=a)ec++;
+    html+=`<span style="margin-right:12px;${Math.abs(a-alpha)<0.01?'font-weight:bold;color:#e67e22':''}">α=${a}: ${ec}辺</span>`;
+  });
+  html+='</div></div>';
+  document.getElementById('fuzzyIsmResults').innerHTML=html;
+  document.getElementById('fuzzyIsmResults').classList.remove('hidden');
+}
+
+// ==================== ソシオメトリー分析 ====================
+function runSociometry() {
+  const members = document.getElementById('socioMembers').value.split(',').map(s=>s.trim());
+  const mat = document.getElementById('socioMatrix').value.trim().split('\n').map(r=>r.split(',').map(Number));
+  const n = members.length;
+  const alpha = parseFloat(document.getElementById('socioAlpha').value);
+  window._socioData = mat;
+  // Validate
+  if(mat.length!==n){alert('メンバー数と行列サイズが不一致');return;}
+  // Fuzzy friendship matrix (symmetric): fij = min(rij, rji)
+  const friend = Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>Math.min(mat[i][j],mat[j][i])));
+  // Graph SVG
+  const R2=100,cx2=160,cy2=160,W2=320,H2=320;
+  const pos2=[];for(let i=0;i<n;i++){const a2=2*Math.PI*i/n-Math.PI/2;pos2.push({x:cx2+R2*Math.cos(a2),y:cy2+R2*Math.sin(a2)});}
+  let svg=`<svg viewBox="0 0 ${W2} ${H2}" style="max-height:320px;width:320px;border:1px solid #e0e0e0;border-radius:6px;background:#fff">`;
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const v=friend[i][j];if(v<alpha)continue;svg+=`<line x1="${pos2[i].x}" y1="${pos2[i].y}" x2="${pos2[j].x}" y2="${pos2[j].y}" stroke="rgba(52,152,219,${v})" stroke-width="${v*5}"/>`;const mx2=(pos2[i].x+pos2[j].x)/2,my2=(pos2[i].y+pos2[j].y)/2;svg+=`<text x="${mx2}" y="${my2-4}" text-anchor="middle" font-size="8" fill="#666">${v.toFixed(1)}</text>`;}
+  pos2.forEach((p,i)=>{svg+=`<circle cx="${p.x}" cy="${p.y}" r="18" fill="#2c3e50" stroke="#f39c12" stroke-width="2"/>`;svg+=`<text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-size="11" fill="white" font-weight="bold">${members[i]}</text>`;});
+  svg+='</svg>';
+  // Cluster analysis
+  const parent2=Array.from({length:n},(_,i)=>i);function find2(x){while(parent2[x]!==x)x=parent2[x];return x;}
+  let ec2=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(friend[i][j]>=alpha){parent2[find2(i)]=find2(j);ec2++;}
+  const groups2={};for(let i=0;i<n;i++){const r=find2(i);if(!groups2[r])groups2[r]=[];groups2[r].push(members[i]);}
+  // Dendrogram data
+  let dendro = '<div style="font-size:0.88em; margin-top:8px">';
+  [0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1].forEach(a=>{
+    const p3=Array.from({length:n},(_,i)=>i);function f3(x){while(p3[x]!==x)x=p3[x];return x;}
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(friend[i][j]>=a)p3[f3(i)]=f3(j);
+    const g3={};for(let i=0;i<n;i++){const r=f3(i);if(!g3[r])g3[r]=[];g3[r].push(members[i]);}
+    const cls=Object.values(g3).map(g=>'{'+g.join(',')+'}').join(' ');
+    dendro+=`<div style="${Math.abs(a-alpha)<0.01?'font-weight:bold;color:#e67e22':'color:#555'}">α=${a.toFixed(1)}: ${cls}</div>`;
+  });
+  dendro+='</div>';
+  // Preference analysis (non-symmetric)
+  let prefHtml = '<table class="result"><thead><tr><th></th>';
+  members.forEach(m=>{prefHtml+=`<th>${m}</th>`;});
+  prefHtml += '<th>出次数</th></tr></thead><tbody>';
+  const outDeg=[], inDeg=Array(n).fill(0);
+  for(let i=0;i<n;i++){
+    prefHtml+=`<tr><td class="label">${members[i]}</td>`;
+    let od=0;
+    for(let j=0;j<n;j++){
+      const v=i===j?'-':mat[i][j].toFixed(1);
+      const bg=i!==j&&mat[i][j]>=alpha?'background:rgba(39,174,96,0.15)':'';
+      prefHtml+=`<td style="${bg}">${v}</td>`;
+      if(i!==j&&mat[i][j]>=alpha){od++;inDeg[j]++;}
+    }
+    outDeg.push(od);
+    prefHtml+=`<td class="highlight">${od}</td></tr>`;
+  }
+  prefHtml+='<tr><td class="label">入次数</td>';
+  inDeg.forEach(d=>{prefHtml+=`<td class="highlight">${d}</td>`;});
+  prefHtml+='<td></td></tr></tbody></table>';
+  // Find leaders and isolates
+  const maxIn=Math.max(...inDeg), minIn=Math.min(...inDeg);
+  let leaders=[], isolates=[];
+  inDeg.forEach((d,i)=>{if(d===maxIn)leaders.push(members[i]);if(d===minIn&&d<=1)isolates.push(members[i]);});
+
+  let html = '<div class="result-section"><h4>ファジィ友好グラフ（α='+alpha.toFixed(2)+'）</h4>';
+  html += '<div style="display:flex;gap:16px;flex-wrap:wrap"><div>'+svg+'</div>';
+  html += '<div><b>クラスター（α='+alpha.toFixed(2)+'）:</b><br>';
+  Object.values(groups2).forEach((g,i)=>{html+=`グループ${i+1}: {${g.join(', ')}}<br>`;});
+  html += '<br><b>分割樹形図（αレベル変化）:</b>'+dendro+'</div></div></div>';
+  html += '<div class="result-section"><h4>選好関係行列と次数分析</h4>'+prefHtml;
+  if(leaders.length>0) html+=`<div style="margin-top:8px"><b>オピニオンリーダー候補:</b> ${leaders.join(', ')}（入次数=${maxIn}）</div>`;
+  if(isolates.length>0) html+=`<div><b>孤立候補:</b> ${isolates.join(', ')}（入次数=${minIn}）</div>`;
+  html+='</div>';
+  document.getElementById('socioResults').innerHTML=html;
+  document.getElementById('socioResults').classList.remove('hidden');
+}
+
+// Auto-generate fuzzy matrices when items change
+const origGenMatrix = generateMatrix;
+generateMatrix = function() {
+  origGenMatrix();
+  try { generateFuzzyDematelMatrix(); } catch(e) {}
+  try { generateFuzzyIsmMatrix(); } catch(e) {}
+};
+</script>
+
+
+</body>
+</html>
